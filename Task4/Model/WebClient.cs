@@ -12,9 +12,9 @@ namespace Task4.Model
         public Task<string> GetStringAsync(string urlText)
         {
             Task<string> task = Task.Factory.StartNew(() =>
-            {
-                Console.WriteLine($"Скачиваем {urlText}");
+            {              
                 Thread.Sleep(5000);
+                Console.WriteLine($"Скачали {urlText}");
                 return urlText;                
             });
             return task;

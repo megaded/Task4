@@ -12,6 +12,7 @@ namespace Task4.Model
         public IHtmlDocument Parse(string htmlText)
         {
             Thread.Sleep(2000);
+            Console.WriteLine($"Распарсено {htmlText}");
             htmlText = $"{htmlText} Распарсено!";
             return  new HtmlDocuments(htmlText);
         }

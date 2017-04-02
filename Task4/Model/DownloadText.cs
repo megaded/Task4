@@ -10,11 +10,8 @@ namespace Task4.Model
     {
         private IWebClient webClient { get; set; }
         private IHtmlParser htmlParser { get; set; }
-        private readonly List<Task<string>> webClients = new List<Task<string>>();
-        private readonly List<Task<string>> webClientsTest = new List<Task<string>>();
-        private readonly List<Task<IHtmlDocument>> queueTasks = new List<Task<IHtmlDocument>>();
-        private readonly List<Task<IHtmlDocument>> queueParseTask = new List<Task<IHtmlDocument>>();
-        private int indexTask = 0;
+        private readonly List<Task<string>> webClientTasks = new List<Task<string>>();
+        private readonly List<Task<IHtmlDocument>> parseTasks = new List<Task<IHtmlDocument>>();
         private int indexWebClientTask = 0;
         private int indexParseTask = 0;
         private object lockObject = new object();
@@ -24,130 +21,45 @@ namespace Task4.Model
         {
             this.webClient = webClient;
             this.htmlParser = htmlParser;
-        }
-
-        public async Task<string> Download(string url)
+        }     
+        public async Task<IHtmlDocument> ParseHtml(string url)
         {
-            if (webClients.Count == 0)
-            {
-                var task = Task.Factory.StartNew(() => webClient.GetStringAsync(url)).Result;
-                lock (lockObject)
-                {
-                    webClients.Add(task);
-                    Console.WriteLine($"Задача {url} добавлена");
-                    indexTask = 0;
-                }
-                return await task;
-            }
-            else
-            {
-                Console.WriteLine("Вошли в элс");
-                var queueTask = webClients[indexTask].ContinueWith((Task<string> t) =>
-                {
-                    Console.WriteLine("Задача 2");
-                    return webClient.GetStringAsync(url).Result;
-                });
-                lock (lockObject)
-                {
-                    webClients.Add(queueTask);
-                    Console.WriteLine($"Задача {url} добавлена");
-                    indexTask++;
-                }
-                return await queueTask;
-            }
-        }
-
-        public async Task<IHtmlDocument> DownloadAndParse(string url)
-        {
-            if (webClientsTest.Count == 0)
+            if (webClientTasks.Count == 0)
             {
                 var taskDowload = Task.Factory.StartNew(() => webClient.GetStringAsync(url)).Result;
                 lock (lockWebClient)
                 {
-                    webClientsTest.Add(taskDowload);
-                    Console.WriteLine($"Скачивание по {url} добавлено");
+                    webClientTasks.Add(taskDowload);
                     indexWebClientTask=0;
                 }
                 var taskParse = taskDowload.ContinueWith((Task<string> t) => htmlParser.Parse(t.Result));
                 lock (lockParse)
                 {
-                    queueParseTask.Add(taskParse);
-                    Console.WriteLine($"Парсинг по {url} добавлено");
+                    parseTasks.Add(taskParse);
                     indexParseTask=0;
                 }                
                 return await taskParse;
             }
             else
             {
-                var taskDowload = webClientsTest[indexWebClientTask].ContinueWith((Task<string> t) => webClient.GetStringAsync(url).Result);
+                var taskDowload = webClientTasks[indexWebClientTask].ContinueWith((Task<string> t) => webClient.GetStringAsync(url).Result);
                 lock (lockWebClient)
                 {
-                    webClientsTest.Add(taskDowload);
-                    Console.WriteLine($"Скачивание по {url} добавлено");
+                    webClientTasks.Add(taskDowload);
                     indexWebClientTask++;
                 }
-                var taskParse = queueParseTask[indexParseTask].ContinueWith((Task<IHtmlDocument> t) => 
+                var taskParse = parseTasks[indexParseTask].ContinueWith((Task<IHtmlDocument> t) => 
                 {
-                    Console.WriteLine("Парсим!");
                     var parse = taskDowload.ContinueWith((Task<string> k) => htmlParser.Parse(k.Result)).Result;
                     return parse;
                 });
                 lock (lockParse)
                 {
-                    queueParseTask.Add(taskParse);
-                    Console.WriteLine($"Парсинг по {url} добавлено");
+                    parseTasks.Add(taskParse);
                     indexParseTask++;
                 }
                 return await taskParse;
-            }
-            
-        }
-
-        public async Task<IHtmlDocument> Test(string url)
-        {
-            if (queueTasks.Count == 0)
-            {
-                var task = Task.Factory.StartNew(() =>
-               {
-                   var taskWebclient = Task.Factory.StartNew(() => webClient.GetStringAsync(url).Result);
-                   lock (lockObject)
-                   {
-                       webClientsTest.Add(taskWebclient);
-                       indexWebClientTask = 0;
-                   }
-                   var taskParser = taskWebclient.ContinueWith((Task<string> t) => htmlParser.Parse(t.Result));
-                   Console.WriteLine($"Парсинг {url}");
-                   return taskParser;
-               }).Result;
-                AddTask(task);
-                Console.WriteLine($"Задача {url} добавлена");
-                return await task;
-            }
-            else
-            {
-                Console.WriteLine("Вошли в элс");
-                var taskWebclient = webClientsTest[indexWebClientTask].ContinueWith((Task<string> t) => webClient.GetStringAsync(url).Result);
-                var queuetask = queueTasks[indexTask].ContinueWith((Task<IHtmlDocument> j) =>
-           {                              
-               var taskParser = taskWebclient.ContinueWith((Task<string> t) => htmlParser.Parse(t.Result));
-               Console.WriteLine("Скачивание 2 Парсер запущен");
-               return taskParser.Result;
-           });
-                AddTask(queuetask);
-                Console.WriteLine($"Задача {url} добавлена");
-                return await queuetask;
-            }
-
-        }
-        private void AddTask(Task<IHtmlDocument> task)
-        {
-            lock (lockObject)
-            {
-                queueTasks.Add(task);
-                indexTask = 0;
-            }
-        }
-
-
+            }            
+        }     
     }
 }
