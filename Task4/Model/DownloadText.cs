@@ -14,7 +14,6 @@ namespace Task4.Model
         private readonly List<Task<IHtmlDocument>> parseTasks = new List<Task<IHtmlDocument>>();
         private int indexWebClientTask = 0;
         private int indexParseTask = 0;
-        private object lockObject = new object();
         private object lockWebClient = new object();
         private object lockParse = new object();
         public DownloadText(IWebClient webClient, IHtmlParser htmlParser)
